@@ -1,0 +1,61 @@
+name: Instalar Dependências do Node.js
+
+on:
+  push:
+    branches: [ main, develop, master ]
+  pull_request:
+    branches: [ main, develop, master ]
+  workflow_dispatch:
+
+jobs:
+  install-dependencies:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+      - name: 📥 Fazer checkout do código
+        uses: actions/checkout@v4
+
+      - name: 🔧 Configurar Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: 📋 Exibir versões instaladas
+        run: |
+          echo "=== Versões ==="
+          echo "Node.js: $(node --version)"
+          echo "npm: $(npm --version)"
+          echo "Git: $(git --version)"
+
+      - name: 🔍 Verificar arquivo package-lock.json
+        run: |
+          if [ -f "package-lock.json" ]; then
+            echo "✅ package-lock.json encontrado"
+          else
+            echo "⚠️  package-lock.json não encontrado"
+          fi
+
+      - name: 📦 Instalar dependências (npm ci)
+        run: npm ci
+
+      - name: 📋 Listar pacotes instalados
+        run: npm list --depth=0
+
+      - name: 🔐 Executar auditoria de segurança
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: ✅ Verificar instalação
+        run: |
+          if [ -d "node_modules" ]; then
+            echo "✅ node_modules instalado com sucesso"
+            echo "Total de pacotes: $(find node_modules -type d -maxdepth 1 | wc -l)"
+          else
+            echo "❌ Erro: node_modules não encontrado"
+            exit 1
+          fi
